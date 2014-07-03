@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="project" default="compile" basedir=".">
+
+	<property file="build.properties">
+	</property>
+
+	
+	<target name="init">
+	    <property name="project_name" value="NetLib"/>
+		
+	    <property name="srcDir" value="src"/>
+	    <property name="classDir" value="bin/classes"/>
+		
+		<!--<property name="jar" value="${project_name}.jar"/>-->
+	    <!--<property name="obfjar" value="${project_name}_obf.jar"/>-->
+	    <!--<property name="renamelog" value="${project_name}_renamelog.xml"/>
+	    <property name="shrinklog" value="${project_name}_shrinklog.xml"/>-->
+		<!--<property name="mainclass" value="com.nd.commplatform.NdCommplatform"/>-->
+		
+	    <property name="gen-folder" value="gen" />
+	    <property name="source-folder" value="src" />
+	    <mkdir dir="${classDir}" />
+		
+		<property name="proguard-home" value="F:\\android_sdk_windows\\proguard4.11\\lib"/>
+		<property name="android-jar" value="${sdk.folder}/android.jar" />
+		<property name="external-libs" value="libs" />
+		<!--property name="baifubao-libs" value="E:\\OpenGameSdk\\prj\\02_src\\NetLib\\libs" /-->
+		<!--property name="intective-jar" value="${external-libs}/NdIncentive.jar" /-->
+	 </target>
+	
+ 
+ 
+
+	<!-- 清理 -->
+	<target name="clean" depends="init">
+	      <delete dir="${classDir}" includeEmptyDirs="true" />
+	</target>
+	
+ 
+	<target name="compile" depends="init">
+				<javac encoding="utf-8"  includeantruntime="on" target="1.5" debug="true" extdirs="" srcdir="." destdir="${classDir}" bootclasspath="${android-jar}">
+					<compilerarg value="-Xlint:unchecked"/>
+					<compilerarg value="-Xlint:deprecation"/>
+				</javac>
+				<antcall target="optimize"/>
+			</target>
+	  
+	  <!--
+	    <target name="compile" depends="init">
+	      <javac srcdir="${srcDir}" target="1.6" deprecation="on"  includeantruntime="on"  destdir="${classDir}"  includes="com/nd/**/*.java" encoding="gbk"> 
+	      	<compilerarg value="-Xlint:unchecked"/>
+	      	<src path="${source-folder}" /> 
+	      	<classpath>
+	            <fileset dir="E://android2.1//android-sdk-windows-1.6_r1//platforms//android-8" includes="*.jar"/> 
+	            <pathelement path="${classDir}"/>
+	        </classpath>
+	      </javac>
+	      <antcall target="optimize"/>
+	    </target>
+ 
+	    <target name="jar" depends="compile">
+	      <jar jarfile="${jar}"
+	        basedir="${classDir}"
+	        includes="com/nd/**"> 
+	      </jar>
+	    </target>
+        -->
+	<!-- Execute proguard class flies -->
+	<target name="optimize">
+		<jar basedir="${classDir}" destfile="temp.jar" />
+		
+		<!--jar destfile="temp.jar">
+			<zipfileset src="libs/mini_cid.jar" excludes="META-INF/*" />
+			<fileset dir="${classDir}"/>
+		</jar-->
+		
+		<java jar="${proguard-home}/proguard.jar" fork="true" failonerror="true">
+			<jvmarg value="-Dmaximum.inlined.code.length=64" />
+			<arg value="-injars temp.jar" />
+			<arg value="-outjars yxylib.jar" />
+			<arg value="-libraryjars ${android-jar}"/>
+			<arg value="-libraryjars ${external-libs}"/>
+			
+			<!--arg value="-libraryjars ${external-libs}/sapi-core-5.4.1.jar"/>
+			<arg value="-libraryjars ${external-libs}/alipay.jar"/>
+			<arg value="-libraryjars ${external-libs}/android-support-v4.jar"/>
+			<arg value="-libraryjars ${external-libs}/UPPayAssistEx.jar"/>
+			<arg value="-libraryjars ${external-libs}/UPPayPluginExPro.jar"/>
+			
+			<arg value="-libraryjars ${baifubao-libs}/need_lib.jar"/>
+			<arg value="-libraryjars ${baifubao-libs}/shuyu_paysdk_proguard_v1.0.0.jar"/>
+			<arg value="-libraryjars ${baifubao-libs}/android_api_1.2_forsdk.jar"/-->
+			
+			<arg value="@config.txt"/>  
+		</java>
+		
+		<!--jar basedir="${classDir}" destfile="temp.jar" >
+		    <!zipgroupfileset dir="lib" includes="*.jar">  
+		</jar-->
+		
+		<delete file="temp.jar"/>
+		<!-- delete dir="${classDir}" />
+		<mkdir dir="${classDir}" /-->
+		<!--<delete file="optimized.jar" />-->
+	</target>
+
+</project>
