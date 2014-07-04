@@ -14,7 +14,7 @@ import android.graphics.Matrix;
 public class BitmapUtils {
 
 	/**
-	 * 读取资源缩放bitmap
+	 * 读取资源根据宽度 缩放bitmap
 	 * 
 	 * @param context
 	 * @param res

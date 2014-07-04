@@ -6,6 +6,11 @@ import java.util.List;
 import android.graphics.Bitmap;
 import android.support.v4.util.LruCache;
 
+/**
+ * bitmap管理 工具类 存放bitmap,回收bitmap等
+ * @author yxy
+ *
+ */
 public class BitmapManagerUtils {
 
 	private List<String> mKeys;
@@ -24,8 +29,6 @@ public class BitmapManagerUtils {
 		long maxMemory = Runtime.getRuntime().maxMemory();
 		maxUseMemorySpace = (int) (maxMemory / maxMemoryBlock);
 		singleBitmapMaxSpace = maxUseMemorySpace / minBitmapsNumber;
-		System.out.println("maxMemory : " + maxMemory);
-		System.out.println("maxUseMemorySpace : " + maxUseMemorySpace);
 		mCaches = new LruCache<String, Bitmap>(maxUseMemorySpace) {
 
 			@Override
@@ -38,7 +41,6 @@ public class BitmapManagerUtils {
 					Bitmap oldValue, Bitmap newValue) {
 				super.entryRemoved(evicted, key, oldValue, newValue);
 				if (oldValue != null) {
-					System.out.println("recycle :" + oldValue);
 					oldValue.recycle();
 				}
 			}

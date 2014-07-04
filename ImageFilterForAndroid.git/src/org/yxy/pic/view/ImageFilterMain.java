@@ -795,7 +795,7 @@ public class ImageFilterMain extends Activity {
 				public void run() {
 					showBitmapFromFile();
 				}
-			}, 5000);
+			}, 100);
 		}
 	}
 
