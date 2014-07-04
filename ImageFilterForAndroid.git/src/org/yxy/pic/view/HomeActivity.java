@@ -1,6 +1,7 @@
 package org.yxy.pic.view;
 
-import HaoRan.ImageFilter.R;
+import org.yxy.pic.R;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;

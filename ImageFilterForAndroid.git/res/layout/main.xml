@@ -2,6 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:background="#DD00EEAA"
     android:orientation="vertical" >
 
     <TextView
@@ -10,7 +11,8 @@
         android:layout_height="wrap_content"
         android:singleLine="true"
         android:text="图片渲染中......"
-        android:textColor="#666666"
+        android:padding="10dp"
+        android:textColor="#FFFFFF"
         android:textSize="14dip"
         android:visibility="gone" />
 
@@ -22,6 +24,7 @@
         android:focusable="false" />
 
     <LinearLayout
+        android:id="@+id/gallery_parent"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
