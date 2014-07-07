@@ -6,7 +6,13 @@ import java.util.List;
 import android.graphics.Bitmap;
 import android.support.v4.util.LruCache;
 
-public class BitmapManagerUtils {
+/**
+ * bitmap缓存 工具类 存放bitmap,回收bitmap等
+ * 
+ * @author yxy
+ * 
+ */
+public class BitmapCaches {
 
 	private List<String> mKeys;
 	private LruCache<String, Bitmap> mCaches;
@@ -17,15 +23,13 @@ public class BitmapManagerUtils {
 
 	private int singleBitmapMaxSpace;
 
-	private int maxMemoryBlock = 4;
+	private int maxMemoryBlock = 8;
 
-	private BitmapManagerUtils() {
+	private BitmapCaches() {
 		mKeys = new ArrayList<String>();
 		long maxMemory = Runtime.getRuntime().maxMemory();
 		maxUseMemorySpace = (int) (maxMemory / maxMemoryBlock);
 		singleBitmapMaxSpace = maxUseMemorySpace / minBitmapsNumber;
-		System.out.println("maxMemory : " + maxMemory);
-		System.out.println("maxUseMemorySpace : " + maxUseMemorySpace);
 		mCaches = new LruCache<String, Bitmap>(maxUseMemorySpace) {
 
 			@Override
@@ -38,7 +42,6 @@ public class BitmapManagerUtils {
 					Bitmap oldValue, Bitmap newValue) {
 				super.entryRemoved(evicted, key, oldValue, newValue);
 				if (oldValue != null) {
-					System.out.println("recycle :" + oldValue);
 					oldValue.recycle();
 				}
 			}
@@ -51,10 +54,10 @@ public class BitmapManagerUtils {
 	}
 
 	private static class BitmapManagerUtilsHolder {
-		static BitmapManagerUtils mInstance = new BitmapManagerUtils();
+		static BitmapCaches mInstance = new BitmapCaches();
 	}
 
-	public static BitmapManagerUtils getInstance() {
+	public static BitmapCaches getInstance() {
 		return BitmapManagerUtilsHolder.mInstance;
 	}
 
@@ -67,7 +70,11 @@ public class BitmapManagerUtils {
 		return mCaches.get(key);
 	}
 
-	private void recycle() {
+	private void recycle(String key) {
+		mCaches.remove(key);
+	}
+
+	private void recycleCaches() {
 		synchronized (mCaches) {
 			for (int i = 0; i < mKeys.size(); i++) {
 				String key = mKeys.get(i);
@@ -91,32 +98,63 @@ public class BitmapManagerUtils {
 	}
 
 	/**
-	 * 销毁
+	 * 销毁指定的Bitmap
 	 */
-	public static void destory() {
-		getInstance().recycle();
+	public static void recycleBitmap(String key) {
+		getInstance().recycle(key);
+	}
+	
+
+	public static void putUrl(String url, Bitmap bitmap) {
+		getInstance().putImage(getCacheKey(url), bitmap);
+	}
+
+	public static Bitmap getUrl(String url) {
+		return getInstance().getImage(getCacheKey(url));
 	}
 	
 	/**
-	 * 获取单张bitmap 最大可用大小
+	 * 销毁指定url的Bitmap
+	 */
+	public static void recycleBitmapUrl(String url) {
+		getInstance().recycle(getCacheKey(url));
+	}
+
+	/**
+	 * 销毁
+	 */
+	public static void destory() {
+		getInstance().recycleCaches();
+	}
+
+	/**
+	 * 回收
+	 */
+	public static void recycle() {
+		getInstance().recycleCaches();
+		System.gc();
+	}
+
+	/**
+	 * 获取单张bitmap内存最大可用大小
+	 * 
 	 * @return
 	 */
-	public static int getSingleBitmapMaxSpace(){
+	public static int getSingleBitmapMaxSpace() {
 		return getInstance().singleBitmapMaxSpace;
 	}
 
 	/**
-	 * 获取缩放精度
+	 * 获取url的缓存key
 	 * 
-	 * @param bitmap
+	 * @param url
 	 * @return
 	 */
-	public static float getScale(Bitmap bitmap) {
-		float scale = 1.0f;
-		while (((float)BitmapUtils.getByteCount(bitmap) * scale * scale) > (float) getInstance().singleBitmapMaxSpace) {
-			scale = scale - 0.05f;
+	public static String getCacheKey(String url) {
+		if (url == null) {
+			return "";
 		}
-		return scale;
+		return String.valueOf(url.hashCode());
 	}
-	
+
 }

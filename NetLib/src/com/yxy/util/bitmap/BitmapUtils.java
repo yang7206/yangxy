@@ -14,7 +14,7 @@ import android.graphics.Matrix;
 public class BitmapUtils {
 
 	/**
-	 * 读取资源缩放bitmap
+	 * 读取资源根据宽度 缩放bitmap
 	 * 
 	 * @param context
 	 * @param res
@@ -80,19 +80,19 @@ public class BitmapUtils {
 	}
 
 	/**
-	 * 读取文件并缩放单张bitmap
+	 *  根据指定内存空间 读取文件并缩放bitmap
 	 * 
 	 * @param context
 	 * @param res
 	 * @param width
 	 * @return
 	 */
-	public static Bitmap scaleSingleBitmapFile(String file,
+	public static Bitmap scaleBitmapFromFileWhitMaxMemory(String file,
 			int singleBitmapMaxSpace) {
 		BitmapFactory.Options ops = new BitmapFactory.Options();
 		ops.inJustDecodeBounds = true;
 		Bitmap bitmap = BitmapFactory.decodeFile(file, ops);
-		ops.inSampleSize = getSimpleSize(ops, singleBitmapMaxSpace);
+		ops.inSampleSize = getScaleSizeFromMaxMemory(ops, singleBitmapMaxSpace);
 		ops.inJustDecodeBounds = false;
 		bitmap = BitmapFactory.decodeFile(file, ops);
 		return bitmap;
@@ -100,6 +100,7 @@ public class BitmapUtils {
 
 	/**
 	 * 获取bitmap占用大小
+	 * 
 	 * @param bitmap
 	 * @return
 	 */
@@ -107,12 +108,20 @@ public class BitmapUtils {
 		return bitmap.getRowBytes() * bitmap.getHeight();
 	}
 
-	private static int getSimpleSize(BitmapFactory.Options ops , int singleBitmapMaxSpace){
-		int inSimlpeSize = 1 ;
-		float byteCount = ((float)ops.outWidth) * ((float)ops.outHeight);
-		while (( byteCount * (1f/(float)inSimlpeSize) * (1f/(float)inSimlpeSize)) > (float) singleBitmapMaxSpace) {
-			inSimlpeSize ++ ;
+	/**
+	 * 根据指定内存空间 获取缩放精度;
+	 * 
+	 * @param ops
+	 * @param singleBitmapMaxSpace
+	 * @return
+	 */
+	private static int getScaleSizeFromMaxMemory(BitmapFactory.Options ops,
+			int singleBitmapMaxSpace) {
+		int inSimlpeSize = 1;
+		float byteCount = ((float) ops.outWidth) * ((float) ops.outHeight);
+		while ((byteCount * (1f / (float) inSimlpeSize) * (1f / (float) inSimlpeSize)) > (float) singleBitmapMaxSpace) {
+			inSimlpeSize++;
 		}
-		return inSimlpeSize ;
+		return inSimlpeSize;
 	}
 }
