@@ -11,13 +11,16 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Bitmap.CompressFormat;
+import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.os.Handler;
+import android.text.TextUtils;
 
 /**
  * bitmap加载器
@@ -27,14 +30,66 @@ import android.os.Handler;
  */
 class BitmapLoader implements Runnable {
 	private String mUrl;
-	private IBitmapLoadCallBack mCallback;
+	private List<IBitmapLoadCallBack> mCallbacks;
 	private Handler mHandler;
 	private String mDir;
-	public BitmapLoader(Context ctx,String dir, String url, IBitmapLoadCallBack callback) {
+	private OnDoneListener mListener;
+
+	// 是否已经完成
+	private boolean isDone = false;
+
+	/**
+	 * 
+	 * @param ctx
+	 * @param dir
+	 *            存放文件夹
+	 * @param url
+	 *            下载URL
+	 * @param listener
+	 *            任务完成回调
+	 */
+	public BitmapLoader(Context ctx, String dir, String url,
+			OnDoneListener listener) {
 		this.mHandler = new Handler(ctx.getMainLooper());
 		this.mDir = dir;
 		this.mUrl = url;
-		this.mCallback = callback;
+		this.mCallbacks = new ArrayList<IBitmapLoadCallBack>();
+		this.mListener = listener;
+	}
+
+	/**
+	 * 添加 bitmap加载完成回调
+	 * 
+	 * @param callback
+	 */
+	public void addCallback(IBitmapLoadCallBack callback) {
+		mCallbacks.add(callback);
+	}
+
+	/**
+	 * 成功回调
+	 * 
+	 * @param bitmap
+	 */
+	private void successCallback(Bitmap bitmap) {
+		for (IBitmapLoadCallBack callBack : mCallbacks) {
+			if (callBack != null) {
+				callBack.onLoadSuccess(mUrl, bitmap);
+			}
+		}
+	}
+
+	/**
+	 * 失败回调
+	 * 
+	 * @param errorMsg
+	 */
+	private void failCallback(String errorMsg) {
+		for (IBitmapLoadCallBack callBack : mCallbacks) {
+			if (callBack != null) {
+				callBack.onLoadFail(mUrl, errorMsg);
+			}
+		}
 	}
 
 	/**
@@ -43,13 +98,13 @@ class BitmapLoader implements Runnable {
 	 * @param bitmap
 	 */
 	private void postSuccessInfo(final Bitmap bitmap) {
+		notifyTaskDone();
+		cacheBitmapUrl(mUrl, bitmap);
 		mHandler.post(new Runnable() {
 
 			@Override
 			public void run() {
-				if (mCallback != null) {
-					mCallback.onLoadSuccess(mUrl, bitmap);
-				}
+				successCallback(bitmap);
 			}
 		});
 	}
@@ -60,18 +115,38 @@ class BitmapLoader implements Runnable {
 	 * @param errorMsg
 	 */
 	private void postFailInfo(final String errorMsg) {
+		notifyTaskDone();
 		mHandler.post(new Runnable() {
 
 			@Override
 			public void run() {
-				if (mCallback != null) {
-					mCallback.onLoadFail(mUrl, errorMsg);
-				}
+				failCallback(errorMsg);
 			}
 		});
 	}
 
+	/**
+	 * 任务完成
+	 */
+	private void notifyTaskDone() {
+		isDone = true;
+		if (mListener != null) {
+			mListener.onTaskDone(mUrl);
+		}
+	}
+
+	/**
+	 * 是否已经完成
+	 * 
+	 * @return
+	 */
+	public boolean isDone() {
+		return isDone;
+	}
+
+	//连接超时时间
 	private static final int CONNECT_TIMEOUT = 5000;
+	//读取超时时间
 	private static final int READ_TIMEOUT = 10000;
 
 	/**
@@ -104,19 +179,43 @@ class BitmapLoader implements Runnable {
 			file.delete();
 			e.printStackTrace();
 		} catch (OutOfMemoryError e) {
-			e.printStackTrace();
 			BitmapCaches.recycle();
+			reLoadFromFile();
+			e.printStackTrace();
+			return true ;
 		}
 		if (bitmap != null) {
-			cacheBitmapUrl(url, bitmap);
 			postSuccessInfo(bitmap);
 			return true;
 		}
 		return false;
 	}
+	
+	
+	private void reLoadFromFile(){
+		mHandler.postDelayed(new Runnable() {
+			
+			@Override
+			public void run() {
+				loadBitmapFromFile(mUrl);
+			}
+		}, 100);
+	}
 
 	private void cacheBitmapUrl(String url, Bitmap bitmap) {
 		BitmapCaches.putUrl(url, bitmap);
+	}
+
+	private File getStoreFile() {
+		File file = new File(mDir, BitmapCaches.getCacheKey(mUrl));
+		if (!file.getParentFile().exists()) {
+			file.getParentFile().mkdirs();
+		}
+
+		if (file.exists()) {
+			file.delete();
+		}
+		return file;
 	}
 
 	/**
@@ -139,22 +238,16 @@ class BitmapLoader implements Runnable {
 			conn.setConnectTimeout(CONNECT_TIMEOUT * 3);
 			conn.setReadTimeout(READ_TIMEOUT);
 
-			File file = new File(mDir, BitmapCaches.getCacheKey(url));
-			if (!file.getParentFile().exists()) {
-				file.getParentFile().mkdirs();
-			}
-
-			if (file.exists()) {
-				file.delete();
-			}
+			File file = getStoreFile();
 
 			final int _1M = 1 * 1024 * 1024;
 			final int _READ_SIZE_BLOCK = 1024 * 8;
 			BufferedOutputStream bos = null;
 
 			// 大于1M 先存储再进行缩放显示
-			if (conn.getContentLength() > _1M) {
-
+			if (conn.getContentLength() > _1M
+					|| conn.getContentLength() > BitmapCaches
+							.getSingleBitmapMaxSpace()) {
 				BufferedInputStream bis = null;
 				try {
 					bis = new BufferedInputStream(new FlushedInputStream(
@@ -192,6 +285,10 @@ class BitmapLoader implements Runnable {
 				} catch (Exception e) {
 					postFailInfo(e.getLocalizedMessage());
 					e.printStackTrace();
+				} catch (OutOfMemoryError e) {
+					postFailInfo(e.getLocalizedMessage());
+					e.printStackTrace();
+					BitmapCaches.recycle();
 				} finally {
 					if (bos != null) {
 						bos.close();
@@ -201,10 +298,6 @@ class BitmapLoader implements Runnable {
 		} catch (Exception e) {
 			postFailInfo(e.getLocalizedMessage());
 			e.printStackTrace();
-		} catch (OutOfMemoryError e) {
-			postFailInfo(e.getLocalizedMessage());
-			e.printStackTrace();
-			BitmapCaches.recycle();
 		}
 	}
 
@@ -234,9 +327,16 @@ class BitmapLoader implements Runnable {
 
 	@Override
 	public void run() {
+		if (TextUtils.isEmpty(mUrl)) {
+			return;
+		}
 		if (!loadBitmapFromFile(mUrl)) {
 			loadBitmapFromUrl(mUrl);
 		}
+	}
+
+	public interface OnDoneListener {
+		void onTaskDone(String url);
 	}
 
 }

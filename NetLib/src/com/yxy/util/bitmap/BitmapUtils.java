@@ -22,13 +22,34 @@ public class BitmapUtils {
 	 * @return
 	 */
 	public static Bitmap scaleBitmapRes(Context context, int res, int width) {
-		BitmapFactory.Options ops = new BitmapFactory.Options();
-		ops.inJustDecodeBounds = true;
-		Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(),
-				res, ops);
-		ops.inSampleSize = inSampleSize(ops, width);
-		ops.inJustDecodeBounds = false;
-		bitmap = BitmapFactory.decodeResource(context.getResources(), res, ops);
+		Bitmap bitmap = null;
+		try {
+			BitmapFactory.Options ops = new BitmapFactory.Options();
+			ops.inJustDecodeBounds = true;
+
+			bitmap = BitmapFactory.decodeResource(context.getResources(), res,
+					ops);
+			ops.inSampleSize = inSampleSize(ops, width);
+			ops.inJustDecodeBounds = false;
+			bitmap = BitmapFactory.decodeResource(context.getResources(), res,
+					ops);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} catch (OutOfMemoryError e) {
+			e.printStackTrace();
+		}
+		return bitmap;
+	}
+
+	public static Bitmap loadBitmapRes(Context context, int res) {
+		Bitmap bitmap = null;
+		try {
+			bitmap = BitmapFactory.decodeResource(context.getResources(), res);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} catch (OutOfMemoryError e) {
+			e.printStackTrace();
+		}
 		return bitmap;
 	}
 
@@ -54,10 +75,17 @@ public class BitmapUtils {
 	 * @return
 	 */
 	public static Bitmap scaleBitmap(Bitmap bitmap, float scale) {
-		Matrix matrix = new Matrix();
-		matrix.postScale(scale, scale); // 缩放比例
-		Bitmap resizeBmp = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
-				bitmap.getHeight(), matrix, true);
+		Bitmap resizeBmp = null;
+		try {
+			Matrix matrix = new Matrix();
+			matrix.postScale(scale, scale); // 缩放比例
+			resizeBmp = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
+					bitmap.getHeight(), matrix, true);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} catch (OutOfMemoryError e) {
+			e.printStackTrace();
+		}
 		return resizeBmp;
 	}
 
@@ -70,17 +98,24 @@ public class BitmapUtils {
 	 * @return
 	 */
 	public static Bitmap scaleBitmapFile(String file, int width) {
-		BitmapFactory.Options ops = new BitmapFactory.Options();
-		ops.inJustDecodeBounds = true;
-		Bitmap bitmap = BitmapFactory.decodeFile(file, ops);
-		ops.inSampleSize = inSampleSize(ops, width);
-		ops.inJustDecodeBounds = false;
-		bitmap = BitmapFactory.decodeFile(file, ops);
+		Bitmap bitmap = null;
+		try {
+			BitmapFactory.Options ops = new BitmapFactory.Options();
+			ops.inJustDecodeBounds = true;
+			bitmap = BitmapFactory.decodeFile(file, ops);
+			ops.inSampleSize = inSampleSize(ops, width);
+			ops.inJustDecodeBounds = false;
+			bitmap = BitmapFactory.decodeFile(file, ops);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} catch (OutOfMemoryError e) {
+			e.printStackTrace();
+		}
 		return bitmap;
 	}
 
 	/**
-	 *  根据指定内存空间 读取文件并缩放bitmap
+	 * 根据指定内存空间 读取文件并缩放bitmap
 	 * 
 	 * @param context
 	 * @param res
@@ -89,12 +124,20 @@ public class BitmapUtils {
 	 */
 	public static Bitmap scaleBitmapFromFileWhitMaxMemory(String file,
 			int singleBitmapMaxSpace) {
-		BitmapFactory.Options ops = new BitmapFactory.Options();
-		ops.inJustDecodeBounds = true;
-		Bitmap bitmap = BitmapFactory.decodeFile(file, ops);
-		ops.inSampleSize = getScaleSizeFromMaxMemory(ops, singleBitmapMaxSpace);
-		ops.inJustDecodeBounds = false;
-		bitmap = BitmapFactory.decodeFile(file, ops);
+		Bitmap bitmap = null;
+		try {
+			BitmapFactory.Options ops = new BitmapFactory.Options();
+			ops.inJustDecodeBounds = true;
+			bitmap = BitmapFactory.decodeFile(file, ops);
+			ops.inSampleSize = getScaleSizeFromMaxMemory(ops,
+					singleBitmapMaxSpace);
+			ops.inJustDecodeBounds = false;
+			bitmap = BitmapFactory.decodeFile(file, ops);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} catch (OutOfMemoryError e) {
+			e.printStackTrace();
+		}
 		return bitmap;
 	}
 
