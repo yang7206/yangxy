@@ -37,23 +37,33 @@ public class BitmapManager {
 	private List<WeakReference<Future<?>>> mTaskList;
 	private HashMap<String, WeakReference<BitmapLoader>> mLoaderMap;
 
+	private boolean isInit = false;
+
 	private BitmapManager() {
-		mThreadPools = Executors.newFixedThreadPool(MAX_THREAD_NUMBER);
-		mTaskList = new ArrayList<WeakReference<Future<?>>>();
-		mLoaderMap = new HashMap<String, WeakReference<BitmapLoader>>();
+		init();
 	}
 
-	private static class BitmapManagerHolder {
-		static BitmapManager mInstance = new BitmapManager();
+	private void init() {
+		if (!isInit) {
+			isInit = true;
+			mThreadPools = Executors.newFixedThreadPool(MAX_THREAD_NUMBER);
+			mTaskList = new ArrayList<WeakReference<Future<?>>>();
+			mLoaderMap = new HashMap<String, WeakReference<BitmapLoader>>();
+		}
 	}
+
+	private static BitmapManager mInstance;
 
 	/**
 	 * 获取实例
 	 * 
 	 * @return
 	 */
-	public static BitmapManager getInstance() {
-		return BitmapManagerHolder.mInstance;
+	public synchronized static BitmapManager getInstance() {
+		if (mInstance == null) {
+			mInstance = new BitmapManager();
+		}
+		return mInstance;
 	}
 
 	private String DIR_CACHES = Environment.getExternalStorageDirectory()
@@ -76,18 +86,18 @@ public class BitmapManager {
 	 *            bitmap的url地址
 	 * @param callback
 	 */
-	public void getBitmap(Context ctx, String url, IBitmapLoadCallBack callback) {
+	public WeakReference<Future<?>> getBitmap(Context ctx, String url, IBitmapLoadCallBack callback) {
 		recycle();
 
 		if (TextUtils.isEmpty(url)) {
 			callback.onLoadFail(url, "URL IS NULL");
-			return;
+			return null;
 		}
 
 		Bitmap bitmap = BitmapCaches.getUrl(url);
 		if (bitmap != null && !bitmap.isRecycled()) {
 			callback.onLoadSuccess(url, bitmap);
-			return;
+			return null;
 		}
 
 		WeakReference<BitmapLoader> reference = mLoaderMap.get(url);
@@ -100,8 +110,11 @@ public class BitmapManager {
 			loader.addCallback(callback);
 			mLoaderMap.put(url, new WeakReference<BitmapLoader>(loader));
 			Future<?> task = mThreadPools.submit(loader);
-			mTaskList.add(new WeakReference<Future<?>>(task));
+			WeakReference<Future<?>> weak = new WeakReference<Future<?>>(task);
+			mTaskList.add(weak);
+			return weak;
 		}
+		return null;
 	}
 
 	/**
@@ -178,5 +191,7 @@ public class BitmapManager {
 			mLoaderMap.clear();
 		}
 		BitmapCaches.destory();
+		isInit = false;
+		mInstance = null;
 	}
 }
