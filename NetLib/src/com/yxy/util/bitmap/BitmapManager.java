@@ -1,6 +1,7 @@
 package com.yxy.util.bitmap;
 
 import java.io.File;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,6 +12,7 @@ import java.util.concurrent.Future;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.text.TextUtils;
 
@@ -66,8 +68,7 @@ public class BitmapManager {
 		return mInstance;
 	}
 
-	private String DIR_CACHES = Environment.getExternalStorageDirectory()
-			+ File.separator + "bitmap_caches";
+	private String DIR_CACHES = Environment.getExternalStorageDirectory() + File.separator + "bitmap_caches";
 
 	/**
 	 * 设置存放文件夹
@@ -101,8 +102,7 @@ public class BitmapManager {
 		}
 
 		WeakReference<BitmapLoader> reference = mLoaderMap.get(url);
-		if (reference != null && reference.get() != null
-				&& !reference.get().isDone()) {
+		if (reference != null && reference.get() != null && !reference.get().isDone()) {
 			BitmapLoader loader = reference.get();
 			loader.addCallback(callback);
 		} else {
@@ -115,6 +115,63 @@ public class BitmapManager {
 			return weak;
 		}
 		return null;
+	}
+
+	/**
+	 * 从assts获取图片
+	 * 
+	 * @param ctx
+	 * @param name
+	 * @return
+	 */
+	public Bitmap getBitmapFromAssts(Context ctx, String name) {
+		Bitmap bitmap = getBitmap(name);
+
+		if (bitmap != null) {
+			return bitmap;
+		}
+		
+		try {
+			InputStream is = ctx.getAssets().open(name);
+			BitmapFactory.Options opts = new BitmapFactory.Options();
+			opts.inSampleSize = BitmapUtils.inSimpleSizeWithInputStream(is, BitmapManager.getSingleBitmapMaxSpace());
+			bitmap = BitmapFactory.decodeStream(is, null, opts);
+			putBitmap(name, bitmap);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} catch (OutOfMemoryError e) {
+			e.printStackTrace();
+			BitmapCaches.recycle();
+		}
+		return bitmap;
+	}
+
+	/**
+	 * 从文件获取图片
+	 * 
+	 * @param ctx
+	 * @param name
+	 * @return
+	 */
+	public Bitmap getBitmapFromFile(Context ctx, String filePath) {
+		Bitmap bitmap = getBitmap(filePath);
+
+		if (bitmap != null) {
+			return bitmap;
+		}
+
+		File file = new File(filePath);
+		if (!file.exists()) {
+			return null;
+		}
+
+		try {
+			bitmap = BitmapUtils.scaleBitmapFromFileWhitMaxMemory(file.getAbsolutePath(), BitmapCaches.getSingleBitmapMaxSpace());
+			putBitmap(filePath, bitmap);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return bitmap;
 	}
 
 	/**
@@ -143,8 +200,7 @@ public class BitmapManager {
 
 		@Override
 		public void onTaskDone(String url) {
-			if (mLoaderMap != null && url != null
-					&& mLoaderMap.containsKey(url)) {
+			if (mLoaderMap != null && url != null && mLoaderMap.containsKey(url)) {
 				mLoaderMap.remove(url);
 			}
 		}
@@ -193,5 +249,9 @@ public class BitmapManager {
 		BitmapCaches.destory();
 		isInit = false;
 		mInstance = null;
+	}
+
+	public static int getSingleBitmapMaxSpace() {
+		return BitmapCaches.getSingleBitmapMaxSpace();
 	}
 }
