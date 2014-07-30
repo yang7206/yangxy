@@ -11,13 +11,14 @@ import android.util.AttributeSet;
 import android.widget.ImageView;
 
 import com.yxy.util.bitmap.BitmapManager;
+import com.yxy.util.bitmap.BitmapUtils;
 import com.yxy.util.bitmap.IBitmapLoadCallBack;
 
 /**
  * 自动加载imageView
  * 
  * @author yxy
- *
+ * 
  */
 public class SmartImageView extends ImageView {
 
@@ -43,7 +44,6 @@ public class SmartImageView extends ImageView {
 	private void init(Context context) {
 		mHandler = new Handler(context.getMainLooper());
 	}
-
 
 	public void setImageFromAssets(String name, String loadUrl, int loadingImageRes) {
 		setImageFromAssets(name, loadUrl, loadingImageRes, loadingImageRes);
@@ -113,42 +113,97 @@ public class SmartImageView extends ImageView {
 	}
 
 	public void setImage(String loadUrl, int loadingImageRes) {
-		setImage(loadUrl, loadingImageRes, loadingImageRes);
+		setImage(loadUrl, loadingImageRes, false);
+	}
+	
+	/**
+	 * 设置图片
+	 * 
+	 * @param loadUrl
+	 * @param loadingImageRes
+	 */
+	public void setImage(String loadUrl, int loadingImageRes , boolean isRoundness) {
+		setImage(loadUrl, loadingImageRes, loadingImageRes, false , isRoundness);
 	}
 
-	public void setImage(final String loadUrl, final int loadingImageRes, final int failImageRes) {
+	/**
+	 * 设置URL 图片
+	 * 
+	 * @param loadUrl
+	 *            加载地址
+	 * @param loadingImageRes
+	 *            加载时的显示的图片资源
+	 * @param isFilterColor
+	 *            是否过滤颜色为黑白
+	 */
+	public void setImage(String loadUrl, int loadingImageRes, boolean isFilterColor, boolean isRoundness) {
+		setImage(loadUrl, loadingImageRes, loadingImageRes, isFilterColor, isRoundness);
+	}
 
-		setImageResource(loadingImageRes);
+	/**
+	 * 设置URL 图片
+	 * 
+	 * @param loadUrl
+	 *            加载地址
+	 * @param loadingImageRes
+	 *            加载时的显示的图片资源
+	 * @param failImageRes
+	 *            加载失败时的显示的图片资源
+	 * @param isFilterColor
+	 *            是否过滤颜色为黑白
+	 * @param isRoundness
+	 * 			  是否圆形图片
+	 */
+	public void setImage(final String loadUrl, final int loadingImageRes, final int failImageRes, final boolean isFilterColor ,final boolean isRoundness) {
+
+		setImageDrawableRound(loadingImageRes, isFilterColor, isRoundness);
 
 		cancelLoader();
 
 		if (TextUtils.isEmpty(loadUrl)) {
-			setImageResource(failImageRes);
+			setImageDrawableRound(failImageRes, isFilterColor, isRoundness);
 			return;
 		}
 		mLoadUrl = loadUrl;
-		mHandler.post(new Runnable() {
+
+		if (isFilterColor) {
+			Bitmap bitmap = BitmapManager.getInstance().getBitmap(loadUrl + "_filterColor");
+			if (bitmap != null) {
+				setImageBitmap(isRoundness?BitmapUtils.getRoundedCornerBitmap(bitmap):bitmap);
+				return;
+			}
+		}
+
+		weak = BitmapManager.getInstance().getBitmap(getContext(), loadUrl, new IBitmapLoadCallBack() {
 
 			@Override
-			public void run() {
-				weak = BitmapManager.getInstance().getBitmap(getContext(), loadUrl, new IBitmapLoadCallBack() {
-
-					@Override
-					public void onLoadSuccess(String url, Bitmap bitmap) {
-						if (mLoadUrl == url) {
-							setImageBitmap(bitmap);
-						}
+			public void onLoadSuccess(String url, Bitmap bitmap) {
+				if (mLoadUrl == url) {
+					if (isFilterColor) {
+						Bitmap filterBitmap = BitmapUtils.gray(bitmap);
+						BitmapManager.getInstance().putBitmap(loadUrl + "_filterColor", filterBitmap);
+						setImageBitmap(isRoundness?BitmapUtils.getRoundedCornerBitmap(filterBitmap):filterBitmap);
+					} else {
+						setImageBitmap(isRoundness?BitmapUtils.getRoundedCornerBitmap(bitmap):bitmap);
 					}
+				}
+			}
 
-					@Override
-					public void onLoadFail(String url, String errorMsg) {
-						if (mLoadUrl == url) {
-							setImageResource(failImageRes);
-						}
-					}
-				});
+			@Override
+			public void onLoadFail(String url, String errorMsg) {
+				if (mLoadUrl == url) {
+					setImageDrawableRound(failImageRes, isFilterColor, isRoundness);
+				}
 			}
 		});
+	}
+	
+	private void setImageDrawableRound(int drawableRes, boolean isFilterColor, boolean isRoundness) {
+		if (isRoundness) {
+			setImageBitmap(BitmapUtils.getRoundedCornerBitmap(BitmapUtils.loadBitmapRes(getContext(), drawableRes)));
+		} else {
+			setImageDrawable(BitmapUtils.filterColor(getContext(), drawableRes, isFilterColor));
+		}
 	}
 
 }

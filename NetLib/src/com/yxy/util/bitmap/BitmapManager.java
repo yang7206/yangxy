@@ -34,7 +34,7 @@ public class BitmapManager {
 
 	private ExecutorService mThreadPools;
 
-	private final int MAX_THREAD_NUMBER = 10;
+//	private final int MAX_THREAD_NUMBER = 10;
 
 	private List<WeakReference<Future<?>>> mTaskList;
 	private HashMap<String, WeakReference<BitmapLoader>> mLoaderMap;
@@ -48,7 +48,7 @@ public class BitmapManager {
 	private void init() {
 		if (!isInit) {
 			isInit = true;
-			mThreadPools = Executors.newFixedThreadPool(MAX_THREAD_NUMBER);
+			mThreadPools = Executors.newCachedThreadPool();
 			mTaskList = new ArrayList<WeakReference<Future<?>>>();
 			mLoaderMap = new HashMap<String, WeakReference<BitmapLoader>>();
 		}
